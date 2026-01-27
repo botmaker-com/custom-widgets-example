@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widget Test Page</title>
+    <style>
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-card: #0f3460;
+            --accent: #e94560;
+            --accent-hover: #ff6b6b;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --success: #00d26a;
+            --warning: #ffc107;
+            --error: #ff4757;
+            --border: #2a2a4a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        header h1 {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            margin-bottom: 12px;
+        }
+
+        .card h2 {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .card h2 .icon {
+            font-size: 14px;
+        }
+
+        .token-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .token-header h2 {
+            margin-bottom: 0;
+        }
+
+        .screen-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            background: var(--bg-card);
+            color: var(--accent);
+        }
+
+        .screen-badge .screen-label {
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .status-badge.valid {
+            background: rgba(0, 210, 106, 0.15);
+            color: var(--success);
+        }
+
+        .status-badge.invalid {
+            background: rgba(255, 71, 87, 0.15);
+            color: var(--error);
+        }
+
+        .status-badge.warning {
+            background: rgba(255, 193, 7, 0.15);
+            color: var(--warning);
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 6px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 10px;
+            background: var(--bg-card);
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        .info-row .label {
+            color: var(--text-secondary);
+        }
+
+        .info-row .value {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 11px;
+            color: var(--accent);
+        }
+
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+        }
+
+        .action-group {
+            background: var(--bg-card);
+            border-radius: 6px;
+            padding: 10px;
+        }
+
+        .action-group label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .action-group textarea {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 13px;
+            margin-bottom: 6px;
+            resize: vertical;
+        }
+
+        .action-group textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent);
+        }
+
+        .events-log {
+            height: 200px;
+            overflow-y: auto;
+            background: var(--bg-card);
+            border-radius: 6px;
+            padding: 10px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 11px;
+        }
+
+        .event-item {
+            padding: 6px 8px;
+            margin-bottom: 4px;
+            border-radius: 4px;
+            background: var(--bg-secondary);
+            border-left: 3px solid var(--accent);
+        }
+
+        .event-item.outgoing {
+            border-left-color: var(--success);
+        }
+
+        .event-item .event-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2px;
+        }
+
+        .event-item .event-type {
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .event-item.outgoing .event-type {
+            color: var(--success);
+        }
+
+        .event-item .event-time {
+            color: var(--text-secondary);
+            font-size: 10px;
+        }
+
+        .event-item .event-payload {
+            color: var(--text-secondary);
+            word-break: break-all;
+            font-size: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .token-raw {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 10px;
+            word-break: break-all;
+            color: var(--text-secondary);
+            background: var(--bg-card);
+            padding: 8px;
+            border-radius: 4px;
+            max-height: 60px;
+            overflow-y: auto;
+        }
+
+        .clear-btn {
+            font-size: 11px;
+            padding: 3px 8px;
+            margin-left: auto;
+        }
+
+        .no-actions {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .no-actions .screen-name {
+            color: var(--accent);
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Widget Test Page</h1>
+            <p>Test bidirectional iframe communication</p>
+        </header>
+
+        <div class="card">
+            <div class="token-header">
+                <h2><span class="icon">🔐</span> Token</h2>
+                <div class="screen-badge">
+                    <span class="screen-label">Screen:</span>
+                    <span id="current-screen">-</span>
+                </div>
+            </div>
+            <div id="token-status">
+                <div class="empty-state">No token found in URL</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>
+                <span class="icon">📋</span> Events
+                <button class="btn btn-secondary clear-btn" onclick="clearEvents()">Clear</button>
+            </h2>
+            <div class="events-log" id="events-log">
+                <div class="empty-state" id="empty-events">Waiting for events...</div>
+            </div>
+        </div>
+
+        <div class="card" id="actions-card">
+            <h2><span class="icon">⚡</span> Actions <span id="actions-screen-label" style="font-weight: 400;"></span></h2>
+            <div id="actions-container">
+                <div class="no-actions">No actions available for current screen</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const MESSAGE_TYPES = {
+            EVENT: 'BM_WIDGET_EVENT',
+            ACTION: 'BM_WIDGET_ACTION',
+            ACTION_RESPONSE: 'BM_WIDGET_ACTION_RESPONSE',
+        };
+
+        const SCREEN_ACTIONS = {
+            CHATS: [
+                { id: 'fillInput', label: 'Fill Input', placeholder: 'Enter text to fill in the input...' },
+                { id: 'sendMessage', label: 'Send Message', placeholder: 'Enter message to send...' },
+            ],
+            CONTACTS: [],
+        };
+
+        let widgetName = null;
+        let currentScreen = null;
+
+        function getTokenFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('bmtoken');
+        }
+
+        function decodeJWT(token) {
+            try {
+                const parts = token.split('.');
+                if (parts.length !== 3) throw new Error('Invalid JWT format');
+                const payload = parts[1];
+                const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+                return JSON.parse(decoded);
+            } catch (e) {
+                console.error('Failed to decode JWT:', e);
+                return null;
+            }
+        }
+
+        function isTokenExpired(payload) {
+            if (!payload || !payload.exp) return true;
+            return Date.now() >= payload.exp * 1000;
+        }
+
+        function formatDate(timestamp) {
+            if (!timestamp) return '-';
+            return new Date(timestamp * 1000).toLocaleString();
+        }
+
+        function updateScreenDisplay() {
+            document.getElementById('current-screen').textContent = currentScreen || '-';
+            updateActionsForScreen();
+        }
+
+        function updateActionsForScreen() {
+            const container = document.getElementById('actions-container');
+            const screenLabel = document.getElementById('actions-screen-label');
+            const actions = SCREEN_ACTIONS[currentScreen] || [];
+
+            screenLabel.textContent = currentScreen ? `(${currentScreen})` : '';
+
+            if (actions.length === 0) {
+                container.innerHTML = `
+                    <div class="no-actions">
+                        ${currentScreen
+                            ? `No actions available for <span class="screen-name">${currentScreen}</span> screen`
+                            : 'Select a screen to see available actions'}
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="actions-grid">
+                    ${actions.map(action => `
+                        <div class="action-group">
+                            <label>${action.label}</label>
+                            <textarea id="action-${action.id}" rows="2" placeholder="${action.placeholder}"></textarea>
+                            <button class="btn btn-primary" onclick="sendAction('${action.id}', document.getElementById('action-${action.id}').value)">${action.label}</button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function initializeToken() {
+            const token = getTokenFromUrl();
+            const statusEl = document.getElementById('token-status');
+
+            if (!token) {
+                statusEl.innerHTML = `
+                    <div class="status-badge warning"><span class="status-dot"></span>No Token</div>
+                    <p style="margin-top: 10px; font-size: 12px; color: var(--text-secondary);">
+                        Load this page inside an iframe with <code style="color: var(--accent);">?bmtoken=eyJ...</code>
+                    </p>
+                `;
+                updateScreenDisplay();
+                return;
+            }
+
+            const payload = decodeJWT(token);
+
+            if (!payload) {
+                statusEl.innerHTML = `
+                    <div class="status-badge invalid"><span class="status-dot"></span>Invalid Token</div>
+                    <div class="token-raw" style="margin-top: 10px;">${token}</div>
+                `;
+                updateScreenDisplay();
+                return;
+            }
+
+            const expired = isTokenExpired(payload);
+            widgetName = payload['custom-widget-name'] || 'unknown';
+            currentScreen = payload.screen || null;
+
+            statusEl.innerHTML = `
+                <div class="status-badge ${expired ? 'invalid' : 'valid'}">
+                    <span class="status-dot"></span>${expired ? 'Expired' : 'Valid'}
+                </div>
+                <div class="info-grid" style="margin-top: 10px;">
+                    <div class="info-row">
+                        <span class="label">Widget</span>
+                        <span class="value">${widgetName}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Business</span>
+                        <span class="value">${payload.businessId || payload.bid || '-'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Issued</span>
+                        <span class="value">${formatDate(payload.iat)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Expires</span>
+                        <span class="value">${formatDate(payload.exp)}</span>
+                    </div>
+                </div>
+                <details style="margin-top: 10px;">
+                    <summary style="cursor: pointer; color: var(--text-secondary); font-size: 11px;">Raw Token</summary>
+                    <div class="token-raw" style="margin-top: 6px;">${token}</div>
+                </details>
+            `;
+
+            updateScreenDisplay();
+        }
+
+        function addEventToLog(type, data, isOutgoing = false) {
+            const logEl = document.getElementById('events-log');
+            const emptyEl = document.getElementById('empty-events');
+            if (emptyEl) emptyEl.remove();
+
+            const time = new Date().toLocaleTimeString();
+            const eventEl = document.createElement('div');
+            eventEl.className = `event-item ${isOutgoing ? 'outgoing' : ''}`;
+            eventEl.innerHTML = `
+                <div class="event-header">
+                    <span class="event-type">${isOutgoing ? '↑ ' : '↓ '}${type}</span>
+                    <span class="event-time">${time}</span>
+                </div>
+                <div class="event-payload">${JSON.stringify(data, null, 2)}</div>
+            `;
+            logEl.insertBefore(eventEl, logEl.firstChild);
+        }
+
+        function clearEvents() {
+            document.getElementById('events-log').innerHTML =
+                '<div class="empty-state" id="empty-events">Waiting for events...</div>';
+        }
+
+        function handleIncomingMessage(event) {
+            if (!event.data || !event.data.messageType) return;
+            const { messageType, ...rest } = event.data;
+
+            if (messageType === MESSAGE_TYPES.EVENT) {
+                addEventToLog(rest.event || messageType, rest);
+                if (rest.screen && rest.screen !== currentScreen) {
+                    currentScreen = rest.screen;
+                    updateScreenDisplay();
+                }
+            }
+
+            if (messageType === MESSAGE_TYPES.ACTION_RESPONSE) {
+                addEventToLog('ACTION_RESPONSE', rest);
+            }
+        }
+
+        function generateRequestId() {
+            return 'req_' + Math.random().toString(36).substring(2, 11);
+        }
+
+        function sendAction(action, text) {
+            if (!text || !text.trim()) {
+                alert('Please enter some text');
+                return;
+            }
+
+            const message = {
+                messageType: MESSAGE_TYPES.ACTION,
+                widgetName: widgetName || 'test-widget',
+                action: action,
+                screen: currentScreen || 'CHATS',
+                payload: { text: text },
+                requestId: generateRequestId(),
+            };
+
+            if (window.parent !== window) {
+                window.parent.postMessage(message, '*');
+                addEventToLog(action, message, true);
+
+                const textarea = document.getElementById(`action-${action}`);
+                if (textarea && action === 'sendMessage') {
+                    textarea.value = '';
+                }
+            } else {
+                addEventToLog('ERROR', { message: 'Not running in an iframe' }, true);
+            }
+        }
+
+        window.addEventListener('message', handleIncomingMessage);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeToken();
+            addEventToLog('READY', { widgetName, screen: currentScreen, timestamp: new Date().toISOString() }, true);
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey && e.target.tagName === 'TEXTAREA') {
+                e.preventDefault();
+                const actionId = e.target.id.replace('action-', '');
+                sendAction(actionId, e.target.value);
+            }
+        });
+    </script>
+</body>
+
+</html>
