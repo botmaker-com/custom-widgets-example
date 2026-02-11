@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SLA Guardian - Monitor de SLA en Tiempo Real</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: #0f1419;
+      color: #e1e8ed;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1a2332;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #3a4a5c;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #4a5a6c;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1a2332 0%, #243044 100%);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #2a3a4e;
+    }
+
+    .header-left h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #e1e8ed;
+      letter-spacing: 0.4px;
+    }
+
+    .header-left .subtitle {
+      font-size: 12px;
+      color: #8899a6;
+      margin-top: 2px;
+    }
+
+    .compliance-stat {
+      text-align: right;
+    }
+
+    .compliance-stat .label {
+      font-size: 12px;
+      color: #8899a6;
+      margin-bottom: 4px;
+    }
+
+    .compliance-stat .value {
+      font-size: 28px;
+      font-weight: 700;
+      transition: color 0.4s ease;
+    }
+
+    .compliance-stat .value.good { color: #2ecc71; }
+    .compliance-stat .value.warning { color: #f39c12; }
+    .compliance-stat .value.critical { color: #e74c3c; }
+
+    /* Main content */
+    .main-content {
+      padding: 20px 24px;
+    }
+
+    /* Section titles */
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #e1e8ed;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title::before {
+      content: '';
+      width: 4px;
+      height: 18px;
+      border-radius: 2px;
+      background: #3a7bd5;
+    }
+
+    /* Queue overview */
+    .queue-overview {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .queue-column {
+      background: #1a2332;
+      border-radius: 8px;
+      overflow: hidden;
+      min-height: 160px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .queue-column-header {
+      padding: 10px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .queue-column-header .count-badge {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .queue-column.breached .queue-column-header {
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
+      color: #fff;
+    }
+
+    .queue-column.approaching .queue-column-header {
+      background: linear-gradient(135deg, #f39c12, #e67e22);
+      color: #fff;
+    }
+
+    .queue-column.on-track .queue-column-header {
+      background: linear-gradient(135deg, #2ecc71, #27ae60);
+      color: #fff;
+    }
+
+    .queue-column-body {
+      padding: 10px;
+      flex: 1;
+      overflow-y: auto;
+      max-height: 320px;
+    }
+
+    .queue-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      min-height: 80px;
+      color: #8899a6;
+      font-size: 12px;
+      font-style: italic;
+    }
+
+    /* Ticket cards (queue) */
+    .ticket-card {
+      background: #1e2d3d;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      border-left: 4px solid transparent;
+      transition: background-color 0.2s ease, border-color 0.2s ease;
+      cursor: default;
+    }
+
+    .ticket-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .ticket-card.breached-card {
+      border-left-color: #e74c3c;
+    }
+
+    .ticket-card.approaching-card {
+      border-left-color: #f39c12;
+    }
+
+    .ticket-card.on-track-card {
+      border-left-color: #2ecc71;
+    }
+
+    .ticket-card:hover {
+      background: #263a50;
+    }
+
+    .ticket-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .ticket-code-link {
+      color: #3a9bdc;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    .ticket-code-link:hover {
+      color: #5bb8f5;
+      text-decoration: underline;
+    }
+
+    .ticket-subject {
+      font-size: 12px;
+      color: #8899a6;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      margin-bottom: 6px;
+    }
+
+    .ticket-card-badges {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .badge-priority-critical { background: #e74c3c; color: #fff; }
+    .badge-priority-high { background: #e67e22; color: #fff; }
+    .badge-priority-medium { background: #f39c12; color: #fff; }
+    .badge-priority-low { background: #2ecc71; color: #fff; }
+    .badge-priority-minor { background: #6c757d; color: #fff; }
+
+    .badge-state {
+      background: #243044;
+      color: #8899a6;
+      border: 1px solid #3a4a5c;
+    }
+
+    .ticket-metric-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .ticket-metric-line .metric-name {
+      color: #8899a6;
+    }
+
+    .ticket-metric-line .metric-countdown {
+      font-family: 'Courier New', Courier, monospace;
+      font-weight: 600;
+    }
+
+    .metric-countdown.breached-text { color: #ff6b6b; }
+    .metric-countdown.warning-text { color: #ffd93d; }
+    .metric-countdown.good-text { color: #00d68f; }
+
+    .ticket-assignee {
+      font-size: 12px;
+      color: #8899a6;
+      margin-top: 4px;
+    }
+
+    .ticket-assignee span {
+      color: #b0bec5;
+    }
+
+    /* Attend next button */
+    .attend-next-section {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .attend-next-button {
+      background: linear-gradient(135deg, #e74c3c, #e67e22);
+      color: #fff;
+      border: none;
+      padding: 12px 32px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+      box-shadow: 0 4px 14px rgba(231, 76, 60, 0.35);
+      letter-spacing: 0.4px;
+    }
+
+    .attend-next-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(231, 76, 60, 0.5);
+    }
+
+    .attend-next-button:active {
+      transform: translateY(0);
+    }
+
+    .attend-next-button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .attend-next-label {
+      font-size: 12px;
+      color: #8899a6;
+      margin-top: 6px;
+    }
+
+    /* Ticket detail section */
+    .ticket-detail-section {
+      background: #1a2332;
+      border-radius: 8px;
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+
+    .detail-empty {
+      color: #8899a6;
+      font-size: 14px;
+      text-align: center;
+      padding: 32px 0;
+      font-style: italic;
+    }
+
+    .detail-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid #2a3a4e;
+    }
+
+    .detail-header-left h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #e1e8ed;
+      margin-bottom: 4px;
+    }
+
+    .detail-header-left .detail-subject {
+      font-size: 14px;
+      color: #8899a6;
+      margin-bottom: 8px;
+    }
+
+    .detail-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .detail-meta-item {
+      font-size: 12px;
+      color: #8899a6;
+    }
+
+    .detail-meta-item span {
+      color: #b0bec5;
+    }
+
+    .detail-header-right {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* SLA metric rows */
+    .sla-metrics-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .sla-metric-row {
+      background: #1e2d3d;
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+
+    .sla-metric-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .sla-metric-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #e1e8ed;
+    }
+
+    .sla-metric-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .sla-metric-status.finished { color: #2ecc71; }
+    .sla-metric-status.paused { color: #9b59b6; }
+    .sla-metric-status.breached { color: #e74c3c; }
+    .sla-metric-status.running { color: #3a9bdc; }
+
+    .sla-metric-status-icon {
+      font-size: 14px;
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 8px;
+      background: #0f1419;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 1s linear, background-color 0.4s ease;
+      min-width: 2px;
+    }
+
+    .progress-bar-fill.green { background: linear-gradient(90deg, #2ecc71, #00d68f); }
+    .progress-bar-fill.yellow { background: linear-gradient(90deg, #f39c12, #ffd93d); }
+    .progress-bar-fill.orange { background: linear-gradient(90deg, #e67e22, #f39c12); }
+    .progress-bar-fill.red { background: linear-gradient(90deg, #e74c3c, #ff6b6b); }
+    .progress-bar-fill.dark-red { background: linear-gradient(90deg, #c0392b, #e74c3c); }
+
+    .sla-metric-details {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .sla-metric-time {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 16px;
+      font-weight: 700;
+      color: #e1e8ed;
+    }
+
+    .sla-metric-extra {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .sla-metric-extra-item {
+      font-size: 12px;
+      color: #8899a6;
+    }
+
+    .sla-metric-extra-item span {
+      color: #b0bec5;
+    }
+
+    .sla-metric-extra-item.breach-info {
+      color: #ff6b6b;
+    }
+
+    .sla-metric-extra-item.pause-info {
+      color: #9b59b6;
+    }
+
+    /* Event log */
+    .event-log-section {
+      margin-bottom: 20px;
+    }
+
+    .event-log-toggle {
+      background: #1a2332;
+      border: 1px solid #2a3a4e;
+      color: #8899a6;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease;
+      width: 100%;
+      text-align: left;
+    }
+
+    .event-log-toggle:hover {
+      background: #243044;
+      color: #e1e8ed;
+    }
+
+    .event-log-container {
+      background: #0f1419;
+      border: 1px solid #2a3a4e;
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      max-height: 280px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .event-log-container.open {
+      display: block;
+    }
+
+    .event-log-entry {
+      padding: 6px 12px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 12px;
+      color: #8899a6;
+      border-bottom: 1px solid #1a2332;
+      word-break: break-all;
+    }
+
+    .event-log-entry:last-child {
+      border-bottom: none;
+    }
+
+    .event-log-entry .log-timestamp {
+      color: #6c757d;
+      margin-right: 8px;
+    }
+
+    .event-log-entry .log-event-name {
+      color: #3a9bdc;
+      font-weight: 600;
+      margin-right: 8px;
+    }
+
+    .event-log-entry .log-payload {
+      color: #6c757d;
+    }
+
+    .event-log-empty {
+      padding: 20px;
+      text-align: center;
+      color: #6c757d;
+      font-size: 12px;
+      font-style: italic;
+    }
+
+    /* Waiting message */
+    .waiting-message {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 0;
+      color: #8899a6;
+      font-size: 14px;
+      font-style: italic;
+    }
+
+    .waiting-message::before {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #3a9bdc;
+      margin-right: 10px;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .queue-overview {
+        grid-template-columns: 1fr;
+      }
+
+      .header {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+      }
+
+      .compliance-stat {
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1>SLA Guardian</h1>
+      <div class="subtitle">Monitor de SLA en Tiempo Real</div>
+    </div>
+    <div class="compliance-stat">
+      <div class="label">Cumplimiento del Equipo</div>
+      <div class="value good" id="complianceValue">--%</div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <!-- Queue overview section -->
+    <div class="section-title">Resumen de Cola</div>
+    <div class="queue-overview" id="queueOverview">
+      <div class="queue-column breached">
+        <div class="queue-column-header">
+          En Incumplimiento
+          <span class="count-badge" id="breachedCount">0</span>
+        </div>
+        <div class="queue-column-body" id="breachedColumn">
+          <div class="waiting-message">Esperando datos...</div>
+        </div>
+      </div>
+      <div class="queue-column approaching">
+        <div class="queue-column-header">
+          Cerca del Vencimiento
+          <span class="count-badge" id="approachingCount">0</span>
+        </div>
+        <div class="queue-column-body" id="approachingColumn">
+          <div class="waiting-message">Esperando datos...</div>
+        </div>
+      </div>
+      <div class="queue-column on-track">
+        <div class="queue-column-header">
+          En Tiempo
+          <span class="count-badge" id="onTrackCount">0</span>
+        </div>
+        <div class="queue-column-body" id="onTrackColumn">
+          <div class="waiting-message">Esperando datos...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attend next button -->
+    <div class="attend-next-section">
+      <button class="attend-next-button" id="attendNextButton" disabled>
+        Atender Siguiente
+      </button>
+      <div class="attend-next-label" id="attendNextLabel">Sin tickets urgentes</div>
+    </div>
+
+    <!-- Ticket detail section -->
+    <div class="section-title">Detalle de Ticket Seleccionado</div>
+    <div class="ticket-detail-section" id="ticketDetailSection">
+      <div class="detail-empty">Esperando datos... Seleccione un ticket para ver el detalle de SLA.</div>
+    </div>
+
+    <!-- Event log -->
+    <div class="event-log-section">
+      <button class="event-log-toggle" id="eventLogToggle">Mostrar Log de Eventos</button>
+      <div class="event-log-container" id="eventLogContainer">
+        <div class="event-log-empty">Sin eventos registrados</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // Widget Name from JWT
+    // =========================================================================
+    const extractWidgetNameFromToken = () => {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('bmtoken');
+        if (!token) return 'sla-guardian';
+        const payloadSegment = token.split('.')[1];
+        if (!payloadSegment) return 'sla-guardian';
+        const decoded = JSON.parse(atob(payloadSegment));
+        return decoded['custom-widget-name'] || 'sla-guardian';
+      } catch (error) {
+        return 'sla-guardian';
+      }
+    };
+
+    const widgetName = extractWidgetNameFromToken();
+
+    // =========================================================================
+    // State
+    // =========================================================================
+    let queueTickets = [];
+    let selectedTicket = null;
+    let eventLog = [];
+    let hasReceivedQueueData = false;
+    let hasReceivedSelectedTicket = false;
+
+    // =========================================================================
+    // Translations & Mappings
+    // =========================================================================
+    const METRIC_NAMES_SPANISH = {
+      'TIME_IN_CURRENT_STATE': 'Tiempo en Estado Actual',
+      'TIME_WAITING_ASSIGNATION_IN_CURRENT_SUPPORT_TEAM': 'Tiempo Esperando Asignación',
+      'TOTAL_TIME_IN_CURRENT_SUPPORT_TEAM': 'Tiempo Total en Equipo',
+      'TIME_TO_FIRST_RESPONSE': 'Tiempo a Primera Respuesta',
+      'TIME_TO_RESOLVE': 'Tiempo para Resolver',
+    };
+
+    const PRIORITY_LABELS = {
+      'CRITICAL': 'Crítica',
+      'HIGH': 'Alta',
+      'MEDIUM': 'Media',
+      'LOW': 'Baja',
+      'MINOR': 'Menor',
+    };
+
+    const PRIORITY_CLASSES = {
+      'CRITICAL': 'badge-priority-critical',
+      'HIGH': 'badge-priority-high',
+      'MEDIUM': 'badge-priority-medium',
+      'LOW': 'badge-priority-low',
+      'MINOR': 'badge-priority-minor',
+    };
+
+    const STATE_LABELS = {
+      'NEW': 'Nuevo',
+      'OPEN': 'Abierto',
+      'CLOSED': 'Cerrado',
+      'CANCELLED': 'Cancelado',
+    };
+
+    const PAUSE_REASON_LABELS = {
+      'BY_CALENDAR': 'Por Calendario',
+      'BY_STATE': 'Por Estado',
+    };
+
+    // Priority urgency order (lower index = more urgent)
+    const PRIORITY_ORDER = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'MINOR'];
+
+    // =========================================================================
+    // Utility Functions
+    // =========================================================================
+    const formatMillisToReadable = (millis) => {
+      if (millis == null || isNaN(millis)) return '0h 0m 0s';
+
+      const totalSeconds = Math.floor(Math.abs(millis) / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      const sign = millis < 0 ? '-' : '';
+      return sign + hours + 'h ' + minutes + 'm ' + seconds + 's';
+    };
+
+    const formatMillisToShort = (millis) => {
+      if (millis == null || isNaN(millis)) return '0h 0m';
+
+      const totalMinutes = Math.floor(Math.abs(millis) / 60000);
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+
+      return hours + 'h ' + minutes + 'm';
+    };
+
+    const formatDateString = (dateStr) => {
+      if (!dateStr) return '--';
+      try {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('es-ES', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      } catch (error) {
+        return dateStr;
+      }
+    };
+
+    const truncateText = (text, maxLength) => {
+      if (!text) return '';
+      if (text.length <= maxLength) return text;
+      return text.substring(0, maxLength) + '...';
+    };
+
+    const getMetricSpanishName = (key) => {
+      return METRIC_NAMES_SPANISH[key] || key;
+    };
+
+    const getPriorityLabel = (priority) => {
+      return PRIORITY_LABELS[priority] || priority || 'N/A';
+    };
+
+    const getPriorityClass = (priority) => {
+      return PRIORITY_CLASSES[priority] || 'badge-priority-minor';
+    };
+
+    const getStateLabel = (state) => {
+      return STATE_LABELS[state] || state || 'N/A';
+    };
+
+    // =========================================================================
+    // Metric Analysis
+    // =========================================================================
+    const getMetricUrgencyRatio = (metric) => {
+      if (!metric || metric.finished) return -1;
+      if (metric.isBreached) return 2;
+      if (metric.thresholdMillis && metric.thresholdMillis > 0) {
+        return (metric.ticksMillis || 0) / metric.thresholdMillis;
+      }
+      return 0;
+    };
+
+    const getMostUrgentMetric = (metrics) => {
+      if (!metrics) return null;
+
+      let mostUrgent = null;
+      let highestRatio = -Infinity;
+
+      const metricKeys = Object.keys(metrics);
+      for (let i = 0; i < metricKeys.length; i++) {
+        const key = metricKeys[i];
+        const metric = metrics[key];
+        const ratio = getMetricUrgencyRatio(metric);
+        if (ratio > highestRatio) {
+          highestRatio = ratio;
+          mostUrgent = { key: key, metric: metric, ratio: ratio };
+        }
+      }
+
+      return mostUrgent;
+    };
+
+    const classifyTicket = (ticket) => {
+      if (!ticket || !ticket.metrics) return 'on-track';
+
+      const metricKeys = Object.keys(ticket.metrics);
+      let hasApproaching = false;
+
+      for (let i = 0; i < metricKeys.length; i++) {
+        const metric = ticket.metrics[metricKeys[i]];
+        if (!metric) continue;
+
+        if (metric.isBreached) return 'breached';
+
+        if (!metric.finished && metric.thresholdMillis && metric.thresholdMillis > 0) {
+          const ratio = (metric.ticksMillis || 0) / metric.thresholdMillis;
+          if (ratio > 0.75) {
+            hasApproaching = true;
+          }
+        }
+      }
+
+      return hasApproaching ? 'approaching' : 'on-track';
+    };
+
+    const calculateCompliance = () => {
+      let totalActiveMetrics = 0;
+      let nonBreachedMetrics = 0;
+
+      const allTickets = queueTickets.length > 0 ? queueTickets : (selectedTicket ? [selectedTicket] : []);
+
+      for (let t = 0; t < allTickets.length; t++) {
+        const ticket = allTickets[t];
+        if (!ticket.metrics) continue;
+
+        const metricKeys = Object.keys(ticket.metrics);
+        for (let i = 0; i < metricKeys.length; i++) {
+          const metric = ticket.metrics[metricKeys[i]];
+          if (!metric) continue;
+          totalActiveMetrics++;
+          if (!metric.isBreached) {
+            nonBreachedMetrics++;
+          }
+        }
+      }
+
+      if (totalActiveMetrics === 0) return null;
+      return Math.round((nonBreachedMetrics / totalActiveMetrics) * 100);
+    };
+
+    // Sort tickets by urgency: breached first, then by highest ratio, then by priority
+    const sortTicketsByUrgency = (tickets) => {
+      return tickets.slice().sort((a, b) => {
+        const urgentA = getMostUrgentMetric(a.metrics);
+        const urgentB = getMostUrgentMetric(b.metrics);
+
+        const ratioA = urgentA ? urgentA.ratio : -1;
+        const ratioB = urgentB ? urgentB.ratio : -1;
+
+        // Higher ratio = more urgent = should come first
+        if (ratioB !== ratioA) return ratioB - ratioA;
+
+        // Tie-break by priority
+        const prioA = PRIORITY_ORDER.indexOf(a.priority);
+        const prioB = PRIORITY_ORDER.indexOf(b.priority);
+        return (prioA === -1 ? 99 : prioA) - (prioB === -1 ? 99 : prioB);
+      });
+    };
+
+    const findMostUrgentTicket = () => {
+      if (queueTickets.length === 0) return null;
+      const sorted = sortTicketsByUrgency(queueTickets);
+      return sorted[0] || null;
+    };
+
+    // =========================================================================
+    // Progress Bar Helpers
+    // =========================================================================
+    const getProgressBarColorClass = (metric) => {
+      if (!metric) return 'green';
+      if (metric.isBreached) return 'dark-red';
+      if (!metric.thresholdMillis || metric.thresholdMillis <= 0) return 'green';
+
+      const ratio = (metric.ticksMillis || 0) / metric.thresholdMillis;
+
+      if (ratio > 0.90) return 'red';
+      if (ratio > 0.75) return 'orange';
+      if (ratio > 0.50) return 'yellow';
+      return 'green';
+    };
+
+    const getProgressBarWidth = (metric) => {
+      if (!metric) return 0;
+      if (!metric.thresholdMillis || metric.thresholdMillis <= 0) {
+        // No threshold: show a minimal bar that indicates time is passing
+        return Math.min(100, Math.max(2, ((metric.ticksMillis || 0) / 3600000) * 20));
+      }
+
+      const ratio = (metric.ticksMillis || 0) / metric.thresholdMillis;
+      return Math.min(100, Math.max(1, ratio * 100));
+    };
+
+    const getCountdownColorClass = (metric) => {
+      if (!metric) return 'good-text';
+      if (metric.isBreached) return 'breached-text';
+      if (metric.thresholdMillis && metric.thresholdMillis > 0) {
+        const ratio = (metric.ticksMillis || 0) / metric.thresholdMillis;
+        if (ratio > 0.75) return 'warning-text';
+      }
+      return 'good-text';
+    };
+
+    // =========================================================================
+    // Rendering
+    // =========================================================================
+    const renderComplianceStat = () => {
+      const complianceElement = document.getElementById('complianceValue');
+      const compliance = calculateCompliance();
+
+      if (compliance === null) {
+        complianceElement.textContent = '--%';
+        complianceElement.className = 'value good';
+        return;
+      }
+
+      complianceElement.textContent = compliance + '%';
+
+      if (compliance >= 80) {
+        complianceElement.className = 'value good';
+      } else if (compliance >= 50) {
+        complianceElement.className = 'value warning';
+      } else {
+        complianceElement.className = 'value critical';
+      }
+    };
+
+    const renderTicketCard = (ticket, category) => {
+      const urgentMetric = getMostUrgentMetric(ticket.metrics);
+      const cardClass = category === 'breached' ? 'breached-card' : category === 'approaching' ? 'approaching-card' : 'on-track-card';
+
+      let metricLine = '';
+      if (urgentMetric) {
+        const countdownClass = getCountdownColorClass(urgentMetric.metric);
+        const displayTime = formatMillisToReadable(urgentMetric.metric.ticksMillis || 0);
+        metricLine = '<div class="ticket-metric-line">' +
+          '<span class="metric-name">' + escapeHtml(getMetricSpanishName(urgentMetric.key)) + '</span>' +
+          '<span class="metric-countdown ' + countdownClass + '">' + displayTime + '</span>' +
+          '</div>';
+      }
+
+      let assigneeLine = '';
+      if (ticket.assignee && ticket.assignee.name) {
+        assigneeLine = '<div class="ticket-assignee">Agente: <span>' + escapeHtml(ticket.assignee.name) + '</span></div>';
+      }
+
+      return '<div class="ticket-card ' + cardClass + '" data-ticket-code="' + escapeHtml(ticket.ticketCode || '') + '">' +
+        '<div class="ticket-card-header">' +
+          '<a class="ticket-code-link" data-navigate="' + escapeHtml(ticket.ticketCode || '') + '">' + escapeHtml(ticket.ticketCode || '') + '</a>' +
+        '</div>' +
+        '<div class="ticket-subject">' + escapeHtml(truncateText(ticket.subject, 40)) + '</div>' +
+        '<div class="ticket-card-badges">' +
+          '<span class="badge ' + getPriorityClass(ticket.priority) + '">' + escapeHtml(getPriorityLabel(ticket.priority)) + '</span>' +
+          '<span class="badge badge-state">' + escapeHtml(getStateLabel(ticket.state)) + '</span>' +
+        '</div>' +
+        metricLine +
+        assigneeLine +
+        '</div>';
+    };
+
+    const renderQueueOverview = () => {
+      const breachedTickets = [];
+      const approachingTickets = [];
+      const onTrackTickets = [];
+
+      for (let i = 0; i < queueTickets.length; i++) {
+        const classification = classifyTicket(queueTickets[i]);
+        if (classification === 'breached') {
+          breachedTickets.push(queueTickets[i]);
+        } else if (classification === 'approaching') {
+          approachingTickets.push(queueTickets[i]);
+        } else {
+          onTrackTickets.push(queueTickets[i]);
+        }
+      }
+
+      const sortedBreached = sortTicketsByUrgency(breachedTickets);
+      const sortedApproaching = sortTicketsByUrgency(approachingTickets);
+      const sortedOnTrack = sortTicketsByUrgency(onTrackTickets);
+
+      document.getElementById('breachedCount').textContent = sortedBreached.length;
+      document.getElementById('approachingCount').textContent = sortedApproaching.length;
+      document.getElementById('onTrackCount').textContent = sortedOnTrack.length;
+
+      const breachedColumnEl = document.getElementById('breachedColumn');
+      const approachingColumnEl = document.getElementById('approachingColumn');
+      const onTrackColumnEl = document.getElementById('onTrackColumn');
+
+      if (!hasReceivedQueueData) {
+        breachedColumnEl.innerHTML = '<div class="waiting-message">Esperando datos...</div>';
+        approachingColumnEl.innerHTML = '<div class="waiting-message">Esperando datos...</div>';
+        onTrackColumnEl.innerHTML = '<div class="waiting-message">Esperando datos...</div>';
+        return;
+      }
+
+      breachedColumnEl.innerHTML = sortedBreached.length > 0
+        ? sortedBreached.map(function(t) { return renderTicketCard(t, 'breached'); }).join('')
+        : '<div class="queue-empty">Sin tickets en incumplimiento</div>';
+
+      approachingColumnEl.innerHTML = sortedApproaching.length > 0
+        ? sortedApproaching.map(function(t) { return renderTicketCard(t, 'approaching'); }).join('')
+        : '<div class="queue-empty">Sin tickets cerca del vencimiento</div>';
+
+      onTrackColumnEl.innerHTML = sortedOnTrack.length > 0
+        ? sortedOnTrack.map(function(t) { return renderTicketCard(t, 'on-track'); }).join('')
+        : '<div class="queue-empty">Sin tickets en tiempo</div>';
+    };
+
+    const renderAttendNextButton = () => {
+      const button = document.getElementById('attendNextButton');
+      const label = document.getElementById('attendNextLabel');
+      const mostUrgent = findMostUrgentTicket();
+
+      if (mostUrgent) {
+        button.disabled = false;
+        const classification = classifyTicket(mostUrgent);
+        if (classification === 'breached') {
+          label.textContent = 'Ticket más urgente: ' + mostUrgent.ticketCode + ' (En Incumplimiento)';
+        } else if (classification === 'approaching') {
+          label.textContent = 'Ticket más urgente: ' + mostUrgent.ticketCode + ' (Cerca del Vencimiento)';
+        } else {
+          label.textContent = 'Ticket más urgente: ' + mostUrgent.ticketCode;
+        }
+      } else {
+        button.disabled = true;
+        label.textContent = 'Sin tickets urgentes';
+      }
+    };
+
+    const renderMetricStatusLabel = (metric) => {
+      if (metric.finished) {
+        return '<span class="sla-metric-status finished">' +
+          '<span class="sla-metric-status-icon">&#10003;</span> Cumplido</span>';
+      }
+      if (metric.isPaused) {
+        return '<span class="sla-metric-status paused">' +
+          '<span class="sla-metric-status-icon">&#9646;&#9646;</span> En Pausa</span>';
+      }
+      if (metric.isBreached) {
+        return '<span class="sla-metric-status breached">' +
+          '<span class="sla-metric-status-icon">&#10007;</span> En Incumplimiento</span>';
+      }
+      return '<span class="sla-metric-status running">' +
+        '<span class="sla-metric-status-icon">&#9654;</span> En Curso</span>';
+    };
+
+    const renderSlaMetricRow = (key, metric) => {
+      const colorClass = getProgressBarColorClass(metric);
+      const barWidth = getProgressBarWidth(metric);
+      const timeDisplay = formatMillisToReadable(metric.ticksMillis || 0);
+      const statusLabel = renderMetricStatusLabel(metric);
+
+      let extraItems = '';
+
+      if (metric.thresholdMillis && metric.thresholdMillis > 0) {
+        extraItems += '<span class="sla-metric-extra-item">Límite: <span>' + formatMillisToShort(metric.thresholdMillis) + '</span></span>';
+      }
+
+      if (metric.isPaused && metric.pauseReason) {
+        const pauseLabel = PAUSE_REASON_LABELS[metric.pauseReason] || metric.pauseReason;
+        extraItems += '<span class="sla-metric-extra-item pause-info">Pausa: ' + escapeHtml(pauseLabel) + '</span>';
+      }
+
+      if (metric.isBreached && metric.breachDate) {
+        extraItems += '<span class="sla-metric-extra-item breach-info">Incumplido: ' + formatDateString(metric.breachDate) + '</span>';
+      }
+
+      return '<div class="sla-metric-row" data-metric-key="' + escapeHtml(key) + '">' +
+        '<div class="sla-metric-header">' +
+          '<span class="sla-metric-name">' + escapeHtml(getMetricSpanishName(key)) + '</span>' +
+          statusLabel +
+        '</div>' +
+        '<div class="progress-bar-container">' +
+          '<div class="progress-bar-fill ' + colorClass + '" style="width: ' + barWidth + '%;"></div>' +
+        '</div>' +
+        '<div class="sla-metric-details">' +
+          '<span class="sla-metric-time">' + timeDisplay + '</span>' +
+          '<div class="sla-metric-extra">' + extraItems + '</div>' +
+        '</div>' +
+        '</div>';
+    };
+
+    const renderTicketDetail = () => {
+      const section = document.getElementById('ticketDetailSection');
+
+      if (!selectedTicket) {
+        if (!hasReceivedSelectedTicket) {
+          section.innerHTML = '<div class="detail-empty">Esperando datos... Seleccione un ticket para ver el detalle de SLA.</div>';
+        } else {
+          section.innerHTML = '<div class="detail-empty">Seleccione un ticket para ver el detalle de SLA.</div>';
+        }
+        return;
+      }
+
+      const ticket = selectedTicket;
+
+      let metaItems = '';
+      if (ticket.assignee && ticket.assignee.name) {
+        metaItems += '<span class="detail-meta-item">Agente: <span>' + escapeHtml(ticket.assignee.name) + '</span></span>';
+      }
+      if (ticket.supportTeam) {
+        metaItems += '<span class="detail-meta-item">Equipo: <span>' + escapeHtml(ticket.supportTeam) + '</span></span>';
+      }
+      if (ticket.creationDate) {
+        metaItems += '<span class="detail-meta-item">Creado: <span>' + formatDateString(ticket.creationDate) + '</span></span>';
+      }
+      if (ticket.author) {
+        const authorName = [ticket.author.firstName, ticket.author.lastName].filter(Boolean).join(' ');
+        if (authorName) {
+          metaItems += '<span class="detail-meta-item">Autor: <span>' + escapeHtml(authorName) + '</span></span>';
+        }
+      }
+
+      let metricsHtml = '';
+      if (ticket.metrics && Object.keys(ticket.metrics).length > 0) {
+        const metricKeys = Object.keys(ticket.metrics);
+        metricsHtml = '<div class="sla-metrics-list">';
+        for (let i = 0; i < metricKeys.length; i++) {
+          const metric = ticket.metrics[metricKeys[i]];
+          if (metric) {
+            metricsHtml += renderSlaMetricRow(metricKeys[i], metric);
+          }
+        }
+        metricsHtml += '</div>';
+      } else {
+        metricsHtml = '<div class="detail-empty">Sin métricas de SLA disponibles para este ticket.</div>';
+      }
+
+      section.innerHTML =
+        '<div class="detail-header">' +
+          '<div class="detail-header-left">' +
+            '<h3>' + escapeHtml(ticket.ticketCode || '') + ' - ' + escapeHtml(ticket.subject || '') + '</h3>' +
+            '<div class="detail-meta">' + metaItems + '</div>' +
+          '</div>' +
+          '<div class="detail-header-right">' +
+            '<span class="badge ' + getPriorityClass(ticket.priority) + '">' + escapeHtml(getPriorityLabel(ticket.priority)) + '</span>' +
+            '<span class="badge badge-state">' + escapeHtml(getStateLabel(ticket.state)) + '</span>' +
+          '</div>' +
+        '</div>' +
+        metricsHtml;
+    };
+
+    const renderEventLog = () => {
+      const container = document.getElementById('eventLogContainer');
+
+      if (eventLog.length === 0) {
+        container.innerHTML = '<div class="event-log-empty">Sin eventos registrados</div>';
+        return;
+      }
+
+      let html = '';
+      for (let i = eventLog.length - 1; i >= 0; i--) {
+        const entry = eventLog[i];
+        const payloadStr = truncateText(JSON.stringify(entry.payload), 120);
+        html += '<div class="event-log-entry">' +
+          '<span class="log-timestamp">' + escapeHtml(entry.timestamp) + '</span>' +
+          '<span class="log-event-name">' + escapeHtml(entry.eventName) + '</span>' +
+          '<span class="log-payload">' + escapeHtml(payloadStr) + '</span>' +
+          '</div>';
+      }
+
+      container.innerHTML = html;
+    };
+
+    const renderAll = () => {
+      renderComplianceStat();
+      renderQueueOverview();
+      renderAttendNextButton();
+      renderTicketDetail();
+    };
+
+    // =========================================================================
+    // HTML Escaping
+    // =========================================================================
+    const escapeHtml = (str) => {
+      if (str == null) return '';
+      const text = String(str);
+      const div = document.createElement('div');
+      div.appendChild(document.createTextNode(text));
+      return div.innerHTML;
+    };
+
+    // =========================================================================
+    // Actions
+    // =========================================================================
+    const sendNavigateToTicket = (ticketCode) => {
+      if (!ticketCode) return;
+      const requestId = 'req_' + Math.random().toString(36).substring(2, 11);
+
+      window.parent.postMessage({
+        messageType: 'BM_WIDGET_ACTION',
+        widgetName: widgetName,
+        action: 'navigateToTicket',
+        screen: 'TICKETS',
+        payload: { ticketCode: ticketCode },
+        requestId: requestId,
+      }, '*');
+    };
+
+    // =========================================================================
+    // Event Handling
+    // =========================================================================
+    const addToEventLog = (eventName, payload) => {
+      const now = new Date();
+      const timestamp = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      eventLog.push({
+        timestamp: timestamp,
+        eventName: eventName,
+        payload: payload,
+      });
+
+      // Keep only last 50
+      if (eventLog.length > 50) {
+        eventLog = eventLog.slice(eventLog.length - 50);
+      }
+
+      renderEventLog();
+    };
+
+    const handleTicketSelected = (payload) => {
+      if (!payload) return;
+      hasReceivedSelectedTicket = true;
+      selectedTicket = payload;
+
+      // Also update in queue if present
+      updateTicketInQueue(payload);
+
+      addToEventLog('ticket:selected', payload);
+      renderAll();
+    };
+
+    const handleTicketStatusChanged = (payload) => {
+      if (!payload) return;
+
+      // Update selected ticket if it matches
+      if (selectedTicket && selectedTicket.ticketCode === payload.ticketCode) {
+        selectedTicket.state = payload.newState;
+        if (payload.metrics) {
+          selectedTicket.metrics = payload.metrics;
+        }
+      }
+
+      // Update in queue
+      for (let i = 0; i < queueTickets.length; i++) {
+        if (queueTickets[i].ticketCode === payload.ticketCode) {
+          queueTickets[i].state = payload.newState;
+          if (payload.metrics) {
+            queueTickets[i].metrics = payload.metrics;
+          }
+          break;
+        }
+      }
+
+      addToEventLog('ticket:statusChanged', payload);
+      renderAll();
+    };
+
+    const handleQueueSummary = (payload) => {
+      if (!payload || !payload.tickets) return;
+      hasReceivedQueueData = true;
+      queueTickets = payload.tickets;
+
+      addToEventLog('tickets:queueSummary', { total: payload.total, ticketCount: payload.tickets.length });
+      renderAll();
+    };
+
+    const updateTicketInQueue = (ticketData) => {
+      if (!ticketData || !ticketData.ticketCode) return;
+
+      for (let i = 0; i < queueTickets.length; i++) {
+        if (queueTickets[i].ticketCode === ticketData.ticketCode) {
+          queueTickets[i] = Object.assign({}, queueTickets[i], ticketData);
+          return;
+        }
+      }
+    };
+
+    // =========================================================================
+    // Message Listener
+    // =========================================================================
+    window.addEventListener('message', function(event) {
+      if (!event.data || event.data.messageType !== 'BM_WIDGET_EVENT') return;
+
+      const eventData = event.data;
+      const eventName = eventData.event;
+      const payload = eventData.payload;
+
+      switch (eventName) {
+        case 'ticket:selected':
+          handleTicketSelected(payload);
+          break;
+        case 'ticket:statusChanged':
+          handleTicketStatusChanged(payload);
+          break;
+        case 'tickets:queueSummary':
+          handleQueueSummary(payload);
+          break;
+        default:
+          addToEventLog(eventName || 'unknown', payload);
+          break;
+      }
+    });
+
+    // =========================================================================
+    // Click Delegation
+    // =========================================================================
+    document.addEventListener('click', function(event) {
+      // Handle ticket code link clicks
+      const navigateLink = event.target.closest('[data-navigate]');
+      if (navigateLink) {
+        event.preventDefault();
+        const ticketCode = navigateLink.getAttribute('data-navigate');
+        sendNavigateToTicket(ticketCode);
+        return;
+      }
+    });
+
+    // Attend next button
+    document.getElementById('attendNextButton').addEventListener('click', function() {
+      const mostUrgent = findMostUrgentTicket();
+      if (mostUrgent) {
+        sendNavigateToTicket(mostUrgent.ticketCode);
+      }
+    });
+
+    // Event log toggle
+    document.getElementById('eventLogToggle').addEventListener('click', function() {
+      const container = document.getElementById('eventLogContainer');
+      const toggle = document.getElementById('eventLogToggle');
+      const isOpen = container.classList.contains('open');
+
+      if (isOpen) {
+        container.classList.remove('open');
+        toggle.textContent = 'Mostrar Log de Eventos';
+      } else {
+        container.classList.add('open');
+        toggle.textContent = 'Ocultar Log de Eventos';
+      }
+    });
+
+    // =========================================================================
+    // Real-time Timer (1 second interval)
+    // =========================================================================
+    setInterval(function() {
+      let needsRender = false;
+
+      // Update queue ticket metrics
+      for (let t = 0; t < queueTickets.length; t++) {
+        const ticket = queueTickets[t];
+        if (!ticket.metrics) continue;
+
+        const metricKeys = Object.keys(ticket.metrics);
+        for (let i = 0; i < metricKeys.length; i++) {
+          const metric = ticket.metrics[metricKeys[i]];
+          if (!metric) continue;
+          if (!metric.finished && !metric.isPaused) {
+            metric.ticksMillis = (metric.ticksMillis || 0) + 1000;
+
+            // Check for breach
+            if (!metric.isBreached && metric.thresholdMillis && metric.thresholdMillis > 0) {
+              if (metric.ticksMillis >= metric.thresholdMillis) {
+                metric.isBreached = true;
+                metric.breachDate = new Date().toISOString();
+              }
+            }
+
+            needsRender = true;
+          }
+        }
+      }
+
+      // Update selected ticket metrics
+      if (selectedTicket && selectedTicket.metrics) {
+        const metricKeys = Object.keys(selectedTicket.metrics);
+        for (let i = 0; i < metricKeys.length; i++) {
+          const metric = selectedTicket.metrics[metricKeys[i]];
+          if (!metric) continue;
+
+          // Only tick if the selected ticket is NOT also in the queue
+          // (to avoid double-counting)
+          const isInQueue = queueTickets.some(function(qt) {
+            return qt.ticketCode === selectedTicket.ticketCode;
+          });
+
+          if (!isInQueue && !metric.finished && !metric.isPaused) {
+            metric.ticksMillis = (metric.ticksMillis || 0) + 1000;
+
+            if (!metric.isBreached && metric.thresholdMillis && metric.thresholdMillis > 0) {
+              if (metric.ticksMillis >= metric.thresholdMillis) {
+                metric.isBreached = true;
+                metric.breachDate = new Date().toISOString();
+              }
+            }
+
+            needsRender = true;
+          }
+        }
+      }
+
+      if (needsRender) {
+        renderAll();
+      }
+    }, 1000);
+
+    // =========================================================================
+    // Initial Render
+    // =========================================================================
+    renderAll();
+    renderEventLog();
+  </script>
+</body>
+</html>
