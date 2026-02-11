@@ -924,7 +924,11 @@
 
     const findMostUrgentTicket = () => {
       if (queueTickets.length === 0) return null;
-      const sorted = sortTicketsByUrgency(queueTickets);
+      const candidates = selectedTicket
+        ? queueTickets.filter(t => t.ticketCode !== selectedTicket.ticketCode)
+        : queueTickets;
+      // If all tickets were filtered out (only one in queue), fall back to full list
+      const sorted = sortTicketsByUrgency(candidates.length > 0 ? candidates : queueTickets);
       return sorted[0] || null;
     };
 
